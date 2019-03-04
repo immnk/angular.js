@@ -56,15 +56,6 @@
       }
     })();
 
-
-    // force page reload when new update is available
-    window.applicationCache && window.applicationCache.addEventListener('updateready', function(e) {
-      if (window.applicationCache.status == window.applicationCache.UPDATEREADY) {
-        window.applicationCache.swapCache();
-        window.location.reload();
-      }
-    }, false);
-
     // GA asynchronous tracker
     var _gaq = _gaq || [];
     _gaq.push(['_setAccount', 'UA-8594346-3']);
@@ -85,7 +76,7 @@
           <div class="row">
             <div class="col-md-9 header-branding">
               <a class="brand navbar-brand" href="http://angularjs.org">
-                <img class="logo" src="img/angularjs-for-header-only.svg">
+                <img width="117" height="30" class="logo" ng-src="img/angularjs-for-header-only.svg">
               </a>
               <ul class="nav navbar-nav">
                 <li class="divider-vertical"></li>
@@ -175,7 +166,7 @@
         <div class="container main-grid main-header-grid">
           <div class="grid-left">
             <div ng-controller="DocsVersionsCtrl" class="picker version-picker">
-              <select ng-options="v as ('v' + v.full) group by (v.isStable?'Stable':'Unstable') for v in docs_versions"
+              <select ng-options="v as ('v' + v.version + (v.isSnapshot ? ' (snapshot)' : '')) group by getGroupName(v) for v in docs_versions"
                       ng-model="docs_version"
                       ng-change="jumpToDocsVersion(docs_version)"
                       class="docs-version-jump">
@@ -219,7 +210,7 @@
         </div>
         <div class="grid-right">
           <div id="loading" ng-show="loading">Loading...</div>
-          <div ng-hide="loading" ng-include="currentPage.outputPath" onload="afterPartialLoaded()"  autoscroll></div>
+          <div ng-hide="loading" ng-include="partialPath" autoscroll></div>
         </div>
       </div>
     </section>

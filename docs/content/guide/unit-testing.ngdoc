@@ -1,5 +1,6 @@
 @ngdoc overview
 @name  Unit Testing
+@sortOrder 410
 @description
 
 JavaScript is a dynamically typed language which comes with great power of expression, but it also
@@ -49,7 +50,7 @@ Out of the four options in the list above, only the last one is testable. Let's 
 ### Using the `new` operator
 
 While there is nothing wrong with the `new` operator fundamentally, a problem arises when calling `new`
-on a constructor. This permanently binds the call site to the type. For example, lets say that we try to
+on a constructor. This permanently binds the call site to the type. For example, let's say that we try to
 instantiate an `XHR` that will retrieve data from the server.
 
 ```js
@@ -65,7 +66,7 @@ function MyClass() {
 
 A problem surfaces in tests when we would like to instantiate a `MockXHR` that would
 allow us to return fake data and simulate network failures. By calling `new XHR()` we are
-permanently bound to the actual XHR and there is no  way to replace it. Yes, we could monkey
+permanently bound to the actual XHR and there is no way to replace it. Yes, we could monkey
 patch, but that is a bad idea for many reasons which are outside the scope of this document.
 
 Here's an example of how the class above becomes hard to test when resorting to monkey patching:
@@ -133,7 +134,7 @@ function MyClass() {
 
 However, where does the serviceRegistry come from? If it is:
 * `new`-ed up, the test has no chance to reset the services for testing.
-*  a global look-up then the service returned is global as well (but resetting is easier, since
+* a global look-up then the service returned is global as well (but resetting is easier, since
 only one global variable exists to be reset).
 
 The class above is hard to test since we have to change the global state:
@@ -258,7 +259,7 @@ expect($scope.strength).toEqual('weak');
 ```
 
 Notice that the test is not only much shorter, it is also easier to follow what is happening. We say
-that such a test tells a story, rather then asserting random bits which don't seem to be related.
+that such a test tells a story, rather than asserting random bits which don't seem to be related.
 
 ## Filters
 {@link ng.$filterProvider Filters} are functions which transform the data into a user readable
@@ -267,8 +268,8 @@ logic, further simplifying the application logic.
 
 ```js
 myModule.filter('length', function() {
-  return function(text){
-    return (''+(text||'')).length;
+  return function(text) {
+    return ('' + (text || '')).length;
   }
 });
 
@@ -296,7 +297,7 @@ Now we can add a directive to our app.
 app.directive('aGreatEye', function () {
     return {
         restrict: 'E',
-        replace:  true,
+        replace: true,
         template: '<h1>lidless, wreathed in flame, {{1 + 1}} times</h1>'
     };
 });
@@ -337,6 +338,86 @@ We inject the $compile service and $rootScope before each jasmine test. The $com
 to render the aGreatEye directive. After rendering the directive we ensure that the directive has
 replaced the content and "lidless, wreathed in flame, 2 times" is present.
 
+### Testing Transclusion Directives
+
+Directives that use transclusion are treated specially by the compiler.  Before their compile
+function is called, the contents of the directive's element are removed from the element and
+provided via a transclusion function.  The directive's template is then appended to the directive's
+element, to which it can then insert the transcluded content into its template.
+
+
+Before compilation:
+```html
+<div translude-directive>
+  Some transcluded content
+</div>
+```
+
+After transclusion extraction:
+```html
+<div transclude-directive></div>
+```
+
+After compilation:
+```html
+<div transclude-directive>
+  Some Template
+  <span ng-transclude>Some transcluded content</span>
+</div>
+```
+
+If the directive is using 'element' transclusion, the compiler will actually remove the
+directive's entire element from the DOM and replace it with a comment node. The compiler then
+inserts the directive's template "after" this comment node, as a sibling.
+
+Before compilation
+```html
+<div element-transclude>
+  Some Content
+</div>
+```
+
+After transclusion extraction
+```html
+<!-- elementTransclude -->
+```
+
+After compilation:
+```html
+<!-- elementTransclude -->
+<div element-transclude>
+  Some Template
+  <span ng-transclude>Some transcluded content</span>
+</div>
+```
+
+It is important to be aware of this when writing tests for directives that use 'element'
+transclusion.  If you place the directive on the root element of the DOM fragment that you
+pass to {@link $compile}, then the DOM node returned from the linking function will be the
+comment node and you will lose the ability to access the template and transcluded content.
+
+```javascript
+var node = $compile('<div element-transclude></div>')($rootScope);
+expect(node[0].nodeType).toEqual(node.COMMENT_NODE);
+expect(node[1]).toBeUndefined();
+```
+
+To cope with this you simply ensure that your 'element' transclude directive is wrapped in an
+element, such as a `<div>`.
+
+```javascript
+var node = $compile('<div><div element-transclude></div></div>')($rootScope);
+var contents = node.contents();
+expect(contents[0].nodeType).toEqual(node.COMMENT_NODE);
+expect(contents[1].nodeType).toEqual(node.ELEMENT_NODE);
+```
+
+### Testing Directives With External Templates
+
+If your directive uses `templateUrl`, consider using
+[karma-ng-html2js-preprocessor](https://github.com/karma-runner/karma-ng-html2js-preprocessor)
+to pre-compile HTML templates and thus avoid having to load them over HTTP during test execution.
+Otherwise you may run into issues if the test directory hierarchy differs from the application's.
 
 ## Sample project
 See the [angular-seed](https://github.com/angular/angular-seed) project for an example.

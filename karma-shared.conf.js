@@ -1,3 +1,5 @@
+'use strict';
+
 module.exports = function(config, specificOptions) {
   config.set({
     frameworks: ['jasmine'],
@@ -32,7 +34,8 @@ module.exports = function(config, specificOptions) {
     customLaunchers: {
       'SL_Chrome': {
         base: 'SauceLabs',
-        browserName: 'chrome'
+        browserName: 'chrome',
+        version: '34'
       },
       'SL_Firefox': {
         base: 'SauceLabs',
@@ -42,8 +45,8 @@ module.exports = function(config, specificOptions) {
       'SL_Safari': {
         base: 'SauceLabs',
         browserName: 'safari',
-        platform: 'OS X 10.9',
-        version: '7'
+        platform: 'OS X 10.10',
+        version: '8'
       },
       'SL_IE_9': {
         base: 'SauceLabs',
@@ -156,7 +159,7 @@ module.exports = function(config, specificOptions) {
 
       // ignore web-server's 404s
       if (log.categoryName === 'web-server' && log.level.levelStr === config.LOG_WARN &&
-          IGNORED_404.some(function(ignoredLog) {return msg.indexOf(ignoredLog) !== -1})) {
+          IGNORED_404.some(function(ignoredLog) {return msg.indexOf(ignoredLog) !== -1;})) {
         return;
       }
 

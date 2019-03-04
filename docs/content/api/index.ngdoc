@@ -6,7 +6,7 @@
 Welcome to the AngularJS API docs page. These pages contain the AngularJS reference materials for version <strong ng-bind="version"></strong>.
 
 The documentation is organized into **{@link guide/module modules}** which contain various components of an AngularJS application.
-These components are {@link guide/directive directives}, {@link guide/dev_guide.services services}, {@link guide/filter filters}, {@link guide/providers providers}, {@link guide/templates types}, global APIs and testing mocks.
+These components are {@link guide/directive directives}, {@link guide/services services}, {@link guide/filter filters}, {@link guide/providers providers}, {@link guide/templates templates}, global APIs, and testing mocks.
 
 <div class="alert alert-info">
 **Angular Namespaces `$` and `$$`**
@@ -128,7 +128,7 @@ Use ngRoute to enable URL routing to your application. The ngRoute module suppor
 
 ## {@link ngAnimate ngAnimate}
 
-Use ngAnimate to enable animation features into your application. Various core ng directives will provide
+Use ngAnimate to enable animation features within your application. Various core ng directives will provide
 animation hooks into your application when ngAnimate is included. Animations are defined by using CSS transitions/animations
 or JavaScript callbacks.
 
@@ -148,7 +148,7 @@ or JavaScript callbacks.
       {@link ngAnimate CSS-based animations}
     </td>
     <td>
-      Follow ngAnimate’s CSS naming structure to reference CSS transitions / keyframe animations in AngularJS. Once defined the animation can be triggered by referencing the CSS class within the HTML template code.
+      Follow ngAnimate’s CSS naming structure to reference CSS transitions / keyframe animations in AngularJS. Once defined, the animation can be triggered by referencing the CSS class within the HTML template code.
     </td>
   </tr>
   <tr>
@@ -156,7 +156,7 @@ or JavaScript callbacks.
       {@link ngAnimate JS-based animations}
     </td>
     <td>
-      Use {@link angular.Module#animation module.animation()} to register a JavaScript animation. Once registered the animation can be triggered by referencing the CSS class within the HTML template code.
+      Use {@link angular.Module#animation module.animation()} to register a JavaScript animation. Once registered, the animation can be triggered by referencing the CSS class within the HTML template code.
     </td>
   </tr>
 </table>
@@ -212,7 +212,7 @@ Use ngTouch when developing for mobile browsers/devices.
       {@link ngTouch#service Services / Factories}
     </td>
     <td>
-      The {@link ngTouch.$swipe $swipe} service is used to register and manage mobile DOM events. 
+      The {@link ngTouch.$swipe $swipe} service is used to register and manage mobile DOM events.
     </td>
   </tr>
   <tr>
@@ -252,7 +252,7 @@ Use ngSanitize to securely parse and manipulate HTML data in your application.
 
 ## {@link ngMock ngMock}
 
-Use ngMock to inject and mock modules, factories, services and providers within your unit tests 
+Use ngMock to inject and mock modules, factories, services and providers within your unit tests
 
 <div class="alert alert-info">Include the **angular-mocks.js** file into your test runner for this to work.</div>
 

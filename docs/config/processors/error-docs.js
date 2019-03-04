@@ -1,51 +1,52 @@
+"use strict";
+
 var _ = require('lodash');
-var log = require('winston');
 var path = require('canonical-path');
 
-module.exports = {
-  name: 'error-docs',
-  description: 'Compute the various fields for docs in the Error area',
-  runAfter: ['tags-extracted'],
-  init: function(config, injectables) {
-    injectables.value('errorNamespaces', {});
+/**
+ * @dgProcessor errorDocsProcessor
+ * @description
+ * Process "error" docType docs and generate errorNamespace docs
+ */
+module.exports = function errorDocsProcessor(errorNamespaceMap, getMinerrInfo) {
+  return {
+    $runAfter: ['tags-extracted'],
+    $runBefore: ['extra-docs-added'],
+    $process: function(docs) {
 
-    var minerrInfoPath = config.get('processing.errors.minerrInfoPath');
-    if ( !minerrInfoPath ) {
-      throw new Error('Error in configuration: Please provide a path to the minerr info file (errors.json) ' +
-        'in the `config.processing.errors.minerrInfoPath` property');
-    }
-    injectables.value('minerrInfo', require(minerrInfoPath));
-  },
-  process: function(docs, partialNames, errorNamespaces, minerrInfo) {
+      // Create error namespace docs and attach error docs to each
+      docs.forEach(function(doc) {
+        var parts, namespaceDoc;
 
-    // Create error namespace docs and attach error docs to each
-    _.forEach(docs, function(doc) {
-      if ( doc.docType === 'error' ) {
+        if ( doc.docType === 'error' ) {
 
-        var namespaceDoc = errorNamespaces[doc.namespace];
-        if ( !namespaceDoc ) {
-          // First time we came across this namespace, so create a new one
-          namespaceDoc = errorNamespaces[doc.namespace] = {
-            area: doc.area,
-            name: doc.namespace,
-            errors: [],
-            path: path.dirname(doc.path),
-            outputPath: path.dirname(doc.outputPath) + '.html',
-            docType: 'errorNamespace'
-          };
+          // Parse out the error info from the id
+          parts = doc.name.split(':');
+          doc.namespace = parts[0];
+          doc.name = parts[1];
+
+          // Get or create the relevant errorNamespace doc
+          namespaceDoc = errorNamespaceMap.get(doc.namespace);
+          if ( !namespaceDoc ) {
+            namespaceDoc = {
+              area: 'error',
+              name: doc.namespace,
+              errors: [],
+              docType: 'errorNamespace'
+            };
+            errorNamespaceMap.set(doc.namespace, namespaceDoc);
+          }
+
+          // Link this error doc to its namespace doc
+          namespaceDoc.errors.push(doc);
+          doc.namespaceDoc = namespaceDoc;
+          doc.formattedErrorMessage = getMinerrInfo().errors[doc.namespace][doc.name];
         }
+      });
 
-        // Add this error to the namespace
-        namespaceDoc.errors.push(doc);
-        doc.namespace = namespaceDoc;
-
-        doc.formattedErrorMessage = minerrInfo.errors[doc.namespace.name][doc.name];
-
-      }
-
-    });
-
-
-    return docs.concat(_.values(errorNamespaces));
-  }
+      errorNamespaceMap.forEach(function(errorNamespace) {
+        docs.push(errorNamespace);
+      });
+    }
+  };
 };

@@ -1,3 +1,4 @@
+/* global $LogProvider: false */
 'use strict';
 
 function initService(debugEnabled) {
@@ -118,24 +119,24 @@ describe('$log', function() {
 
   describe("$log.debug", function () {
 
-	  beforeEach(initService(false));
+    beforeEach(initService(false));
 
-	  it("should skip debugging output if disabled", inject(
-	    function(){
-	      $window.console = {log: log,
-	                         warn: warn,
-	                         info: info,
-	                         error: error,
-	                         debug: debug};
-	    },
-	    function($log) {
-	      $log.log();
-	      $log.warn();
-	      $log.info();
-	      $log.error();
-	      $log.debug();
-	      expect(logger).toEqual('log;warn;info;error;');
-	    }
+    it("should skip debugging output if disabled", inject(
+      function(){
+        $window.console = {log: log,
+                           warn: warn,
+                           info: info,
+                           error: error,
+                           debug: debug};
+      },
+      function($log) {
+        $log.log();
+        $log.warn();
+        $log.info();
+        $log.error();
+        $log.debug();
+        expect(logger).toEqual('log;warn;info;error;');
+      }
   ));
 
   });
@@ -143,16 +144,29 @@ describe('$log', function() {
   describe('$log.error', function() {
     var e, $log, errorArgs;
 
-    beforeEach(function() {
-      e = new Error('');
-      e.message = undefined;
-      e.sourceURL = undefined;
-      e.line = undefined;
-      e.stack = undefined;
+    function TestErrorPrototype() {}
+    TestErrorPrototype.prototype = Error.prototype;
 
-      $log = new $LogProvider().$get[1]({console:{error:function() {
-        errorArgs = [].slice.call(arguments, 0);
-      }}});
+    function TestError() {
+      Error.prototype.constructor.apply(this, arguments);
+      this.message = undefined;
+      this.sourceURL = undefined;
+      this.line = undefined;
+      this.stack = undefined;
+    }
+    TestError.prototype = new TestErrorPrototype();
+    TestError.prototype.constructor = TestError;
+
+    beforeEach(function() {
+      e = new TestError('');
+      var mockWindow = {
+        console: {
+          error: function() {
+            errorArgs = [].slice.call(arguments, 0);
+          }
+        }
+      };
+      $log = new $LogProvider().$get[1](mockWindow);
     });
 
 

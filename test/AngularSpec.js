@@ -45,6 +45,20 @@ describe('angular', function() {
       expect(copy(re) === re).toBeFalsy();
     });
 
+    it("should copy RegExp with flags", function() {
+      var re = new RegExp('.*', 'gim');
+      expect(copy(re).global).toBe(true);
+      expect(copy(re).ignoreCase).toBe(true);
+      expect(copy(re).multiline).toBe(true);
+    });
+
+    it("should copy RegExp with lastIndex", function() {
+      var re = /a+b+/g;
+      var str = 'ab aabb';
+      expect(re.exec(str)[0]).toEqual('ab');
+      expect(copy(re).exec(str)[0]).toEqual('aabb');
+    });
+
     it("should deeply copy literal RegExp", function() {
       var objWithRegExp = {
         re: /.*/
@@ -118,7 +132,7 @@ describe('angular', function() {
 
     it('should throw an exception when source and destination are equivalent', function() {
       var src, dst;
-	    src = dst = {key: 'value'};
+      src = dst = {key: 'value'};
       expect(function() { copy(src, dst); }).toThrowMinErr("ng", "cpi", "Can't copy! Source and destination are identical.");
       src = dst = [2, 4];
       expect(function() { copy(src, dst); }).toThrowMinErr("ng", "cpi", "Can't copy! Source and destination are identical.");
@@ -145,6 +159,26 @@ describe('angular', function() {
       expect(hashKey(dst)).not.toEqual(hashKey(src));
       // make sure we retain the old key
       expect(hashKey(dst)).toEqual(h);
+    });
+
+    it('should handle circular references when circularRefs is turned on', function () {
+      var a = {b: {a: null}, self: null, selfs: [null, null, [null]]};
+      a.b.a = a;
+      a.self = a;
+      a.selfs = [a, a.b, [a]];
+
+      var aCopy = copy(a, null);
+      expect(aCopy).toEqual(a);
+
+      expect(aCopy).not.toBe(a);
+      expect(aCopy).toBe(aCopy.self);
+      expect(aCopy.selfs[2]).not.toBe(a.selfs[2]);
+    });
+
+    it('should clear destination arrays correctly when source is non-array', function() {
+      expect(copy(null, [1,2,3])).toEqual([]);
+      expect(copy(undefined, [1,2,3])).toEqual([]);
+      expect(copy({0: 1, 1: 2}, [1,2,3])).toEqual([1,2]);
     });
   });
 
@@ -209,7 +243,7 @@ describe('angular', function() {
 
     it('should omit properties from prototype chain', function() {
       var original, clone = {};
-      function Func() {};
+      function Func() {}
       Func.prototype.hello = "world";
 
       original = new Func();
@@ -218,6 +252,25 @@ describe('angular', function() {
       expect(shallowCopy(original, clone)).toBe(clone);
       expect(clone.hello).toBeUndefined();
       expect(clone.goodbye).toBe("world");
+    });
+
+    it('should handle arrays', function() {
+      var original = [{}, 1],
+          clone = [];
+
+      var aCopy = shallowCopy(original);
+      expect(aCopy).not.toBe(original);
+      expect(aCopy).toEqual(original);
+      expect(aCopy[0]).toBe(original[0]);
+
+      expect(shallowCopy(original, clone)).toBe(clone);
+      expect(clone).toEqual(original);
+    });
+
+    it('should handle primitives', function() {
+      expect(shallowCopy('test')).toBe('test');
+      expect(shallowCopy(3)).toBe(3);
+      expect(shallowCopy(true)).toBe(true);
     });
   });
 
@@ -313,9 +366,15 @@ describe('angular', function() {
       expect(equals(new Date(0), new Date(1))).toBe(false);
       expect(equals(new Date(0), 0)).toBe(false);
       expect(equals(0, new Date(0))).toBe(false);
+
+      expect(equals(new Date(undefined), new Date(undefined))).toBe(true);
+      expect(equals(new Date(undefined), new Date(0))).toBe(false);
+      expect(equals(new Date(undefined), new Date(null))).toBe(false);
+      expect(equals(new Date(undefined), new Date('wrong'))).toBe(true);
     });
 
     it('should correctly test for keys that are present on Object.prototype', function() {
+      /* jshint -W001 */
       // MS IE8 just doesn't work for this kind of thing, since "for ... in" doesn't return
       // things like hasOwnProperty even if it is explicitly defined on the actual object!
       if (msie<=8) return;
@@ -370,14 +429,15 @@ describe('angular', function() {
 
 
   describe('csp', function() {
-    var originalSecurityPolicy;
+    var originalFunction;
 
     beforeEach(function() {
-      originalSecurityPolicy = document.securityPolicy;
+      originalFunction = window.Function;
     });
 
     afterEach(function() {
-      document.securityPolicy = originalSecurityPolicy;
+      window.Function = originalFunction;
+      delete csp.isActive_;
     });
 
 
@@ -387,9 +447,10 @@ describe('angular', function() {
 
 
     it('should return true if CSP is autodetected via CSP v1.1 securityPolicy.isActive property', function() {
-      document.securityPolicy = {isActive: true};
+      window.Function = function() { throw new Error('CSP test'); };
       expect(csp()).toBe(true);
     });
+
 
     it('should return the true when CSP is enabled manually via [ng-csp]', function() {
       spyOn(document, 'querySelector').andCallFake(function(selector) {
@@ -437,6 +498,13 @@ describe('angular', function() {
       expect(parseKeyValue('flag1&flag1=value&flag1=value2&flag1')).
       toEqual({flag1: [true,'value','value2',true]});
     });
+
+
+    it('should ignore properties higher in the prototype chain', function() {
+      expect(parseKeyValue('toString=123')).toEqual({
+        'toString': '123'
+      });
+    });
   });
 
   describe('toKeyValue', function() {
@@ -457,7 +525,7 @@ describe('angular', function() {
       expect(toKeyValue({key: [323,'value',true]})).toEqual('key=323&key=value&key');
       expect(toKeyValue({key: [323,'value',true, 1234]})).
       toEqual('key=323&key=value&key&key=1234');
-  });
+    });
   });
 
 
@@ -472,13 +540,14 @@ describe('angular', function() {
       var obj = new MyObj(),
           log = [];
 
-      forEach(obj, function(value, key) { log.push(key + ':' + value)});
+      forEach(obj, function(value, key) { log.push(key + ':' + value); });
 
       expect(log).toEqual(['bar:barVal', 'baz:bazVal']);
     });
 
 
     it('should not break if obj is an array we override hasOwnProperty', function() {
+      /* jshint -W001 */
       var obj = [];
       obj[0] = 1;
       obj[1] = 2;
@@ -506,7 +575,7 @@ describe('angular', function() {
           log = [];
 
 
-      forEach(nodeList, function(value, key) { log.push(key + ':' + value.innerHTML)});
+      forEach(nodeList, function(value, key) { log.push(key + ':' + value.innerHTML); });
       expect(log).toEqual(['0:a', '1:b', '2:c']);
     });
 
@@ -521,7 +590,7 @@ describe('angular', function() {
       var htmlCollection = document.getElementsByName('x'),
           log = [];
 
-      forEach(htmlCollection, function(value, key) { log.push(key + ':' + value.innerHTML)});
+      forEach(htmlCollection, function(value, key) { log.push(key + ':' + value.innerHTML); });
       expect(log).toEqual(['0:a', '1:c']);
     });
 
@@ -536,7 +605,7 @@ describe('angular', function() {
         var htmlCollection = document.querySelectorAll('[name="x"]'),
           log = [];
 
-        forEach(htmlCollection, function(value, key) { log.push(key + ':' + value.innerHTML)});
+        forEach(htmlCollection, function(value, key) { log.push(key + ':' + value.innerHTML); });
         expect(log).toEqual(['0:a', '1:c']);
       });
     }
@@ -545,28 +614,28 @@ describe('angular', function() {
       var args,
           log = [];
 
-      (function(){ args = arguments}('a', 'b', 'c'));
+      (function(){ args = arguments; }('a', 'b', 'c'));
 
-      forEach(args, function(value, key) { log.push(key + ':' + value)});
+      forEach(args, function(value, key) { log.push(key + ':' + value); });
       expect(log).toEqual(['0:a', '1:b', '2:c']);
     });
 
     it('should handle string values like arrays', function() {
       var log = [];
 
-      forEach('bar', function(value, key) { log.push(key + ':' + value)});
+      forEach('bar', function(value, key) { log.push(key + ':' + value); });
       expect(log).toEqual(['0:b', '1:a', '2:r']);
     });
 
 
     it('should handle objects with length property as objects', function() {
       var obj = {
-            'foo' : 'bar',
-            'length': 2
-          },
-          log = [];
+        'foo' : 'bar',
+        'length': 2
+      },
+      log = [];
 
-      forEach(obj, function(value, key) { log.push(key + ':' + value)});
+      forEach(obj, function(value, key) { log.push(key + ':' + value); });
       expect(log).toEqual(['foo:bar', 'length:2']);
     });
 
@@ -574,13 +643,13 @@ describe('angular', function() {
     it('should handle objects of custom types with length property as objects', function() {
       function CustomType() {
         this.length = 2;
-        this.foo = 'bar'
+        this.foo = 'bar';
       }
 
       var obj = new CustomType(),
           log = [];
 
-      forEach(obj, function(value, key) { log.push(key + ':' + value)});
+      forEach(obj, function(value, key) { log.push(key + ':' + value); });
       expect(log).toEqual(['length:2', 'foo:bar']);
     });
   });
@@ -717,7 +786,7 @@ describe('angular', function() {
 
     it('should bootstrap using class name', function() {
       var appElement = jqLite('<div class="ng-app: ABC;"></div>')[0];
-      angularInit(jqLite('<div></div>').append(appElement)[0], bootstrapSpy);
+      angularInit(appElement, bootstrapSpy);
       expect(bootstrapSpy).toHaveBeenCalledOnceWith(appElement, ['ABC']);
     });
 
@@ -750,7 +819,9 @@ describe('angular', function() {
       expect(function() {
         angularInit(appElement, bootstrap);
       }).toThrowMatching(
-        /\[\$injector:modulerr] Failed to instantiate module doesntexist due to:\n.*\[\$injector:nomod] Module 'doesntexist' is not available! You either misspelled the module name or forgot to load it\./
+        new RegExp('\\[\\$injector:modulerr] Failed to instantiate module doesntexist due to:\\n' +
+                   '.*\\[\\$injector:nomod] Module \'doesntexist\' is not available! You either ' +
+                   'misspelled the module name or forgot to load it\\.')
       );
     });
 
@@ -762,7 +833,7 @@ describe('angular', function() {
       expect(function () {
         angular.bootstrap(element);
       }).toThrowMatching(
-        /\[ng:btstrpd\] App Already Bootstrapped with this Element '<div class="?ng\-scope"?( ng\-[0-9]+="?[0-9]+"?)?>'/i
+        /\[ng:btstrpd\] App Already Bootstrapped with this Element '&lt;div class="?ng\-scope"?( ng[0-9]+="?[0-9]+"?)?&gt;'/i
       );
 
       dealoc(element);
@@ -778,7 +849,7 @@ describe('angular', function() {
       );
 
       dealoc(document);
-    })
+    });
   });
 
 
@@ -939,7 +1010,9 @@ describe('angular', function() {
       expect(function() {
         angular.bootstrap(element, ['doesntexist']);
       }).toThrowMatching(
-          /\[\$injector:modulerr\] Failed to instantiate module doesntexist due to:\n.*\[\$injector:nomod\] Module 'doesntexist' is not available! You either misspelled the module name or forgot to load it\./);
+          new RegExp('\\[\\$injector:modulerr\\] Failed to instantiate module doesntexist due to:\\n' +
+                     '.*\\[\\$injector:nomod\\] Module \'doesntexist\' is not available! You either ' +
+                     'misspelled the module name or forgot to load it\\.'));
 
       expect(element.html()).toBe('{{1+2}}');
       dealoc(element);

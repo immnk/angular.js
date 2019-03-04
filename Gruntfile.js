@@ -1,5 +1,8 @@
+'use strict';
+
 var files = require('./angularFiles').files;
 var util = require('./lib/grunt/utils.js');
+var versionInfo = require('./lib/versions/version-info');
 var path = require('path');
 
 module.exports = function(grunt) {
@@ -8,9 +11,9 @@ module.exports = function(grunt) {
 
   grunt.loadTasks('lib/grunt');
 
-  var NG_VERSION = util.getVersion();
+  var NG_VERSION = versionInfo.currentVersion;
+  NG_VERSION.cdn = versionInfo.cdnVersion;
   var dist = 'angular-'+ NG_VERSION.full;
-
 
   //global beforeEach
   util.init();
@@ -106,6 +109,12 @@ module.exports = function(grunt) {
       options: {
         jshintrc: true,
       },
+      node: {
+        files: { src: ['*.js', 'lib/**/*.js'] },
+      },
+      tests: {
+        files: { src: 'test/**/*.js' },
+      },
       ng: {
         files: { src: files['angularSrc'] },
       },
@@ -200,7 +209,7 @@ module.exports = function(grunt) {
       },
       "promises-aplus-adapter": {
         dest:'tmp/promises-aplus-adapter++.js',
-        src:['src/ng/q.js','lib/promises-aplus/promises-aplus-test-adapter.js']
+        src:['src/ng/q.js', 'lib/promises-aplus/promises-aplus-test-adapter.js']
       }
     },
 
@@ -217,14 +226,17 @@ module.exports = function(grunt) {
     },
 
 
-    "ddescribe-iit": {
+    'ddescribe-iit': {
       files: [
+        'src/**/*.js',
         'test/**/*.js',
-        '!test/ngScenario/DescribeSpec.js'
+        '!test/ngScenario/DescribeSpec.js',
+        '!src/ng/directive/booleanAttrs.js', // legitimate xit here
+        '!src/ngScenario/**/*.js'
       ]
     },
 
-    "merge-conflict": {
+    'merge-conflict': {
       files: [
         'src/**/*',
         'test/**/*',
@@ -245,7 +257,11 @@ module.exports = function(grunt) {
     compress: {
       build: {
         options: {archive: 'build/' + dist +'.zip', mode: 'zip'},
-        src: ['**'], cwd: 'build', expand: true, dot: true, dest: dist + '/'
+        src: ['**'],
+        cwd: 'build',
+        expand: true,
+        dot: true,
+        dest: dist + '/'
       }
     },
 
@@ -277,8 +293,10 @@ module.exports = function(grunt) {
   });
 
 
+
+
   //alias tasks
-  grunt.registerTask('test', 'Run unit, docs and e2e tests with Karma', ['jshint', 'package','test:unit','test:promises-aplus', 'tests:docs', 'test:protractor']);
+  grunt.registerTask('test', 'Run unit, docs and e2e tests with Karma', ['jshint', 'jscs', 'package', 'test:unit', 'test:promises-aplus', 'tests:docs', 'test:protractor']);
   grunt.registerTask('test:jqlite', 'Run the unit tests with Karma' , ['tests:jqlite']);
   grunt.registerTask('test:jquery', 'Run the jQuery unit tests with Karma', ['tests:jquery']);
   grunt.registerTask('test:modules', 'Run the Karma module tests with Karma', ['tests:modules']);
@@ -288,11 +306,11 @@ module.exports = function(grunt) {
   grunt.registerTask('test:travis-protractor', 'Run the end to end tests with Protractor for Travis CI builds', ['connect:testserver', 'protractor:travis']);
   grunt.registerTask('test:ci-protractor', 'Run the end to end tests with Protractor for Jenkins CI builds', ['webdriver', 'connect:testserver', 'protractor:jenkins']);
   grunt.registerTask('test:e2e', 'Alias for test:protractor', ['test:protractor']);
-  grunt.registerTask('test:promises-aplus',['build:promises-aplus-adapter','shell:promises-aplus-tests']);
+  grunt.registerTask('test:promises-aplus',['build:promises-aplus-adapter', 'shell:promises-aplus-tests']);
 
-  grunt.registerTask('minify', ['bower','clean', 'build', 'minall']);
+  grunt.registerTask('minify', ['bower', 'clean', 'build', 'minall']);
   grunt.registerTask('webserver', ['connect:devserver']);
-  grunt.registerTask('package', ['bower','clean', 'buildall', 'minall', 'collect-errors', 'docs', 'copy', 'write', 'compress']);
+  grunt.registerTask('package', ['bower', 'validate-angular-files', 'clean', 'buildall', 'minall', 'collect-errors', 'docs', 'copy', 'write', 'compress']);
   grunt.registerTask('ci-checks', ['ddescribe-iit', 'merge-conflict', 'jshint', 'jscs']);
   grunt.registerTask('default', ['package']);
 };

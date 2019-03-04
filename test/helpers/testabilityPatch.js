@@ -1,3 +1,4 @@
+/* global jQuery: true, uid: true */
 'use strict';
 
 /**
@@ -117,6 +118,15 @@ function dealoc(obj) {
   }
 }
 
+
+function jqLiteCacheSize() {
+  var size = 0;
+  forEach(jqLite.cache, function() { size++; });
+  return size - jqLiteCacheSize.initSize;
+}
+jqLiteCacheSize.initSize = 0;
+
+
 /**
  * @param {DOMElement} element
  * @param {boolean=} showNgClass
@@ -150,7 +160,7 @@ function sortedHtml(element, showNgClass) {
 
         var attr = attributes[i];
         if(attr.name.match(/^ng[\:\-]/) ||
-            (attr.value || attr.value == '') &&
+            (attr.value || attr.value === '') &&
             attr.value !='null' &&
             attr.value !='auto' &&
             attr.value !='false' &&
@@ -166,7 +176,7 @@ function sortedHtml(element, showNgClass) {
             attr.name !='style' &&
             attr.name.substr(0, 6) != 'jQuery') {
           // in IE we need to check for all of these.
-          if (/ng-\d+/.exec(attr.name) ||
+          if (/ng\d+/.exec(attr.name) ||
               attr.name == 'getElementById' ||
               // IE7 has `selected` in attributes
               attr.name == 'selected' ||
@@ -248,13 +258,13 @@ function isCssVisible(node) {
 
 function assertHidden(node) {
   if (isCssVisible(node)) {
-    throw new Error('Node should be hidden but was visible: ' + angular.module.ngMock.dump(node));
+    throw new Error('Node should be hidden but was visible: ' + angular.mock.dump(node));
   }
 }
 
 function assertVisible(node) {
   if (!isCssVisible(node)) {
-    throw new Error('Node should be visible but was hidden: ' + angular.module.ngMock.dump(node));
+    throw new Error('Node should be visible but was hidden: ' + angular.mock.dump(node));
   }
 }
 
@@ -269,21 +279,27 @@ function provideLog($provide) {
 
       log.toString = function() {
         return messages.join('; ');
-      }
+      };
 
       log.toArray = function() {
         return messages;
-      }
+      };
 
       log.reset = function() {
         messages = [];
-      }
+      };
+
+      log.empty = function() {
+        var currentMessages = messages;
+        messages = [];
+        return currentMessages;
+      };
 
       log.fn = function(msg) {
         return function() {
           log(msg);
-        }
-      }
+        };
+      };
 
       log.$$log = true;
 
@@ -293,7 +309,7 @@ function provideLog($provide) {
 
 function pending() {
   dump('PENDING');
-};
+}
 
 function trace(name) {
   dump(new Error(name).stack);

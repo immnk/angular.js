@@ -238,7 +238,7 @@ describe('$route', function() {
     }));
 
     it('matches a URL with special chars', inject(function($route, $location, $rootScope) {
-      $location.path('/$test.23/foo*(bar)/222');
+      $location.path('/$test.23/foo*(bar)/~!@#$%^&*()_+=-`');
       $rootScope.$digest();
       expect($route.current).toBeDefined();
     }));
@@ -560,8 +560,8 @@ describe('$route', function() {
 
       inject(function($route, $httpBackend, $location, $rootScope) {
         var log = '';
-        $rootScope.$on('$routeChangeStart', function(e, next) { log += '$before(' + next.templateUrl + ');'});
-        $rootScope.$on('$routeChangeSuccess', function(e, next) { log += '$after(' + next.templateUrl + ');'});
+        $rootScope.$on('$routeChangeStart', function(e, next) { log += '$before(' + next.templateUrl + ');'; });
+        $rootScope.$on('$routeChangeSuccess', function(e, next) { log += '$after(' + next.templateUrl + ');'; });
 
         $httpBackend.expectGET('r1.html').respond('R1');
         $httpBackend.expectGET('r2.html').respond('R2');
@@ -581,9 +581,9 @@ describe('$route', function() {
     });
 
     it('should NOT load cross domain templates by default', function() {
-        module(function($routeProvider) {
-          $routeProvider.when('/foo', { templateUrl: 'http://example.com/foo.html' });
-        });
+      module(function($routeProvider) {
+        $routeProvider.when('/foo', { templateUrl: 'http://example.com/foo.html' });
+      });
 
       inject(function ($route, $location, $rootScope) {
         $location.path('/foo');
@@ -618,8 +618,8 @@ describe('$route', function() {
 
       inject(function($route, $httpBackend, $location, $rootScope, $routeParams) {
         var log = '';
-        $rootScope.$on('$routeChangeStart', function(e, next) { log += '$before' + angular.toJson($routeParams) + ';'});
-        $rootScope.$on('$routeChangeSuccess', function(e, next) { log += '$after' + angular.toJson($routeParams) + ';'});
+        $rootScope.$on('$routeChangeStart', function(e, next) { log += '$before' + angular.toJson($routeParams) + ';'; });
+        $rootScope.$on('$routeChangeSuccess', function(e, next) { log += '$after' + angular.toJson($routeParams) + ';'; });
 
         $httpBackend.whenGET('r1.html').respond('R1');
         $httpBackend.whenGET('r2.html').respond('R2');
@@ -650,8 +650,8 @@ describe('$route', function() {
 
       inject(function($route, $httpBackend, $location, $rootScope) {
         var log = '';
-        $rootScope.$on('$routeChangeStart', function(e, next) { log += '$before(' + next.templateUrl + ');'});
-        $rootScope.$on('$routeChangeSuccess', function(e, next) { log += '$after(' + next.templateUrl + ');'});
+        $rootScope.$on('$routeChangeStart', function(e, next) { log += '$before(' + next.templateUrl + ');'; });
+        $rootScope.$on('$routeChangeSuccess', function(e, next) { log += '$after(' + next.templateUrl + ');'; });
 
         $httpBackend.expectGET('r1.html').respond('R1');
         $httpBackend.expectGET('r2.html').respond('R2');
@@ -683,8 +683,8 @@ describe('$route', function() {
         $rootScope.$on('$routeChangeError', function(e, next, last, error) {
           log += '$failed(' + next.templateUrl + ', ' + error.status + ');';
         });
-        $rootScope.$on('$routeChangeStart', function(e, next) { log += '$before(' + next.templateUrl + ');'});
-        $rootScope.$on('$routeChangeSuccess', function(e, next) { log += '$after(' + next.templateUrl + ');'});
+        $rootScope.$on('$routeChangeStart', function(e, next) { log += '$before(' + next.templateUrl + ');'; });
+        $rootScope.$on('$routeChangeSuccess', function(e, next) { log += '$after(' + next.templateUrl + ');'; });
 
         $httpBackend.expectGET('r1.html').respond(404, 'R1');
         $httpBackend.expectGET('r2.html').respond('R2');
@@ -825,6 +825,29 @@ describe('$route', function() {
 
         expect($location.path()).toEqual('/bar/id3/sid1/99');
         expect($location.search()).toEqual({appended: 'true', extra: 'eId'});
+        expect($route.current.templateUrl).toEqual('bar.html');
+      });
+    });
+
+
+    it('should properly interpolate optional and eager route vars ' +
+       'when redirecting from path with trailing slash', function() {
+      module(function($routeProvider) {
+        $routeProvider.when('/foo/:id?/:subid?', {templateUrl: 'foo.html'});
+        $routeProvider.when('/bar/:id*/:subid', {templateUrl: 'bar.html'});
+      });
+
+      inject(function($location, $rootScope, $route) {
+        $location.path('/foo/id1/subid2/');
+        $rootScope.$digest();
+
+        expect($location.path()).toEqual('/foo/id1/subid2');
+        expect($route.current.templateUrl).toEqual('foo.html');
+
+        $location.path('/bar/id1/extra/subid2/');
+        $rootScope.$digest();
+
+        expect($location.path()).toEqual('/bar/id1/extra/subid2');
         expect($route.current.templateUrl).toEqual('bar.html');
       });
     });
